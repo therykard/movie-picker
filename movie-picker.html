@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Sorteio Top 250</title>
+<style>
+:root{
+  --bg:#14181c; --bg2:#1c2228; --card:#20272e; --line:#2c333a;
+  --txt:#eff2f4; --txt2:#9ab; --green:#00e054; --orange:#ff8000; --blue:#40bcf4;
+}
+@media (prefers-color-scheme: light){ :root:not([data-theme="dark"]){ --bg:#14181c; } }
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{background:var(--bg);color:var(--txt);height:100%}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+  min-height:100vh; display:flex; justify-content:center;
+}
+.wrap{max-width:640px;width:100%;padding:28px 20px 60px}
+header{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:22px;flex-wrap:wrap;gap:8px}
+h1{font-size:22px;font-weight:800;letter-spacing:.2px}
+h1 span{color:var(--green)}
+.count{font-size:13px;color:var(--txt2)}
+.btn{
+  display:block;width:100%;padding:16px;border:none;border-radius:6px;
+  background:var(--green);color:#0a1a10;font-size:16px;font-weight:800;
+  cursor:pointer;letter-spacing:.3px;
+}
+.btn:active{transform:translateY(1px)}
+.btn.secondary{background:transparent;border:1px solid var(--line);color:var(--txt2);font-weight:600;font-size:13px;padding:10px}
+.results{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:22px 0}
+@media (max-width:440px){.results{grid-template-columns:1fr}}
+.card{background:var(--card);border-radius:8px;overflow:hidden;border:1px solid var(--line)}
+.poster{aspect-ratio:2/3;display:flex;align-items:center;justify-content:center;font-size:38px;font-weight:800;color:rgba(255,255,255,.85);text-align:center;padding:10px}
+.meta{padding:12px}
+.title{font-size:14px;font-weight:700;line-height:1.3;margin-bottom:4px}
+.sub{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.year{font-size:12px;color:var(--txt2)}
+.rating{font-size:12px;font-weight:800;color:var(--green)}
+.markbtn{width:100%;padding:9px;border:1px solid var(--line);background:var(--bg2);color:var(--txt);border-radius:5px;font-size:12px;font-weight:700;cursor:pointer}
+.markbtn.done{background:var(--green);color:#0a1a10;border-color:var(--green)}
+.empty{color:var(--txt2);font-size:14px;text-align:center;padding:40px 10px}
+.footer{margin-top:26px;border-top:1px solid var(--line);padding-top:16px;display:flex;gap:10px}
+.watchedlist{margin-top:16px;font-size:13px;color:var(--txt2);max-height:180px;overflow-y:auto;display:none}
+.watchedlist.open{display:block}
+.watchedlist div{padding:6px 0;border-bottom:1px solid var(--line);display:flex;justify-content:space-between}
+.watchedlist button{background:none;border:none;color:var(--orange);font-size:12px;cursor:pointer}
+.setup{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:16px;margin-bottom:20px}
+.setup p{font-size:13px;color:var(--txt2);margin-bottom:10px;line-height:1.5}
+.setup input{width:100%;padding:10px;border-radius:5px;border:1px solid var(--line);background:var(--bg2);color:var(--txt);font-size:13px;margin-bottom:8px}
+.setup a{color:var(--blue)}
+.poster img{width:100%;height:100%;object-fit:cover}
+.poster{position:relative}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>sorteio<span>250</span></h1>
+    <div class="count" id="count"></div>
+  </header>
+
+  <div class="setup" id="setup" style="display:none">
+    <p>Pra mostrar os posteres reais, cole sua API key (v3) da TMDB. Ela fica salva só neste navegador, nunca sai daqui. Crie a sua de graça em <a href="https://www.themoviedb.org/settings/api" target="_blank">themoviedb.org/settings/api</a>.</p>
+    <input type="text" id="apiKeyInput" placeholder="cole sua API key da TMDB aqui">
+    <button class="btn" id="saveKeyBtn" style="padding:10px">salvar</button>
+  </div>
+
+  <button class="btn" id="drawBtn">sortear 2 filmes</button>
+
+  <div class="results" id="results"></div>
+
+  <div class="footer">
+    <button class="btn secondary" id="toggleWatched">ver assistidos</button>
+    <button class="btn secondary" id="resetBtn">zerar lista</button>
+  </div>
+  <div class="watchedlist" id="watchedList"></div>
+</div>
+
+<script>
+const MOVIES = [
+["The Shawshank Redemption",1994,9.3],["The Godfather",1972,9.2],["The Dark Knight",2008,9.0],
+["The Godfather Part II",1974,9.0],["12 Angry Men",1957,9.0],["The Lord of the Rings: The Return of the King",2003,9.0],
+["Schindler's List",1993,9.0],["The Lord of the Rings: The Fellowship of the Ring",2001,8.9],
+["Pulp Fiction",1994,8.9],["The Good, the Bad and the Ugly",1966,8.8],["The Lord of the Rings: The Two Towers",2002,8.8],
+["Forrest Gump",1994,8.8],["Fight Club",1999,8.8],["Inception",2010,8.8],["The Empire Strikes Back",1980,8.7],
+["The Matrix",1999,8.7],["Goodfellas",1990,8.7],["Interstellar",2014,8.7],["One Flew Over the Cuckoo's Nest",1975,8.7],
+["Se7en",1995,8.6],["Seven Samurai",1954,8.6],["It's a Wonderful Life",1946,8.6],["The Silence of the Lambs",1991,8.6],
+["Saving Private Ryan",1998,8.6],["The Green Mile",1999,8.6],["City of God",2002,8.6],["Life Is Beautiful",1997,8.6],
+["Terminator 2: Judgment Day",1991,8.6],["Star Wars",1977,8.6],["Back to the Future",1985,8.5],
+["Spirited Away",2001,8.6],["The Pianist",2002,8.5],["Gladiator",2000,8.5],["Parasite",2019,8.5],
+["Grave of the Fireflies",1988,8.5],["Harakiri",1962,8.6],["Psycho",1960,8.5],["The Lion King",1994,8.5],
+["American History X",1998,8.5],["Whiplash",2014,8.5],["The Departed",2006,8.5],["Léon: The Professional",1994,8.5],
+["The Usual Suspects",1995,8.5],["The Prestige",2006,8.5],["Casablanca",1942,8.5],["Modern Times",1936,8.5],
+["Django Unchained",2012,8.5],["Rear Window",1954,8.5],["Once Upon a Time in the West",1968,8.5],
+["City Lights",1931,8.5],["Apocalypse Now",1979,8.4],["WALL-E",2008,8.4],["Memento",2000,8.4],
+["Raiders of the Lost Ark",1981,8.4],["Alien",1979,8.5],["Sunset Boulevard",1950,8.4],
+["Dr. Strangelove",1964,8.5],["Paths of Glory",1957,8.5],["The Great Dictator",1940,8.4],
+["Aliens",1986,8.4],["Joker",2019,8.3],["Coco",2017,8.4],["The Shining",1980,8.4],
+["Cinema Paradiso",1988,8.5],["Come and See",1985,8.4],["Capernaum",2018,8.4],
+["Inglourious Basterds",2009,8.3],["Avengers: Infinity War",2018,8.4],["Amadeus",1984,8.4],
+["Bicycle Thieves",1948,8.3],["Warrior",2011,8.2],["Reservoir Dogs",1992,8.3],["Das Boot",1981,8.4],
+["Oldboy",2003,8.3],["Braveheart",1995,8.3],["M",1931,8.3],["Vertigo",1958,8.3],
+["North by Northwest",1959,8.3],["Toy Story",1995,8.3],["Toy Story 3",2010,8.3],
+["Full Metal Jacket",1987,8.3],["3 Idiots",2009,8.4],["The Sting",1973,8.3],["Downfall",2004,8.3],
+["Dangal",2016,8.3],["A Clockwork Orange",1971,8.2],["Your Name.",2016,8.3],["The Great Escape",1963,8.2],
+["For a Few Dollars More",1965,8.2],["Batman Begins",2005,8.2],["Up",2009,8.3],["Snatch",2000,8.2],
+["Yojimbo",1961,8.2],["Taxi Driver",1976,8.2],["No Country for Old Men",2007,8.2],
+["Requiem for a Dream",2000,8.3],["2001: A Space Odyssey",1968,8.3],["Lawrence of Arabia",1962,8.3],
+["Eternal Sunshine of the Spotless Mind",2004,8.3],["The Wolf of Wall Street",2013,8.2],
+["Double Indemnity",1944,8.3],["Ran",1985,8.2],["Judgment at Nuremberg",1961,8.2],
+["Singin' in the Rain",1952,8.3],["Metropolis",1927,8.3],["The Deer Hunter",1978,8.1],
+["All About Eve",1950,8.2],["The Elephant Man",1980,8.2],["Trainspotting",1996,8.1],
+["On the Waterfront",1954,8.2],["Amélie",2001,8.3],["Indiana Jones and the Last Crusade",1989,8.2],
+["Good Will Hunting",1997,8.3],["Anatomy of a Fall",2023,7.7],["Mr. Smith Goes to Washington",1939,8.1],
+["Room",2015,8.1],["Kill Bill: Vol. 1",2003,8.2],["Ford v Ferrari",2019,8.1],["Shutter Island",2010,8.2],
+["Andrei Rublev",1966,8.2],["The Truman Show",1998,8.2],["Rashomon",1950,8.2],["My Neighbor Totoro",1988,8.1],
+["There Will Be Blood",2007,8.2],["Scarface",1983,8.1],["Into the Wild",2007,8.1],["Heat",1995,8.3],
+["Barry Lyndon",1975,8.1],["Blade Runner 2049",2017,8.0],["A Beautiful Mind",2001,8.2],
+["Gone with the Wind",1939,8.2],["Persona",1966,8.1],["Spider-Man: Into the Spider-Verse",2018,8.4],
+["The Kid",1921,8.2],["Some Like It Hot",1959,8.2],["Munich",2005,7.6],["Rocky",1976,8.1],
+["Baahubali 2: The Conclusion",2017,8.1],["Hotel Rwanda",2004,8.1],["Green Book",2018,8.2],
+["The Incredibles",2004,8.0],["Monty Python and the Holy Grail",1975,8.2],
+["All Quiet on the Western Front",2022,7.8],["Jaws",1975,8.1],["In the Name of the Father",1993,8.1],
+["The Hunt",2012,8.3],["Wild Strawberries",1957,8.1],["The Big Lebowski",1998,8.1],
+["The Sixth Sense",1999,8.1],["Klaus",2019,8.2],["Gone Girl",2014,8.1],["How to Train Your Dragon",2010,8.1],
+["V for Vendetta",2005,8.1],["Wild Tales",2014,8.1],["The Father",2020,8.2],["1917",2019,8.2],
+["Crouching Tiger, Hidden Dragon",2000,7.9],["Prisoners",2013,8.1],["The Grand Budapest Hotel",2014,8.1],
+["Stalker",1979,8.1],["The Wages of Fear",1953,8.1],["Rush",2013,8.1],["Cool Hand Luke",1967,8.1],
+["Nights of Cabiria",1957,8.1],["The Apartment",1960,8.2],["Rebecca",1940,8.1],
+["The Bridge on the River Kwai",1957,8.1],["Diabolique",1955,8.1],["Lock, Stock and Two Smoking Barrels",1998,8.1],
+["Network",1976,8.1],["Braveheart",1995,8.3],["To Kill a Mockingbird",1962,8.2],
+["Toy Story 2",1999,7.9],["Chinatown",1974,8.1],["The Wizard of Oz",1939,8.1],
+["Die Hard",1988,8.2],["Lagaan",2001,8.1],["Wo Hu Cang Long",2000,7.9],
+["The Iron Giant",1999,8.0],["The Sound of Music",1965,8.0],["The Third Man",1949,8.1],
+["Yesterday",2019,7.0],["12 Years a Slave",2013,8.1],["Batman Begins",2005,8.2],
+["The Hustler",1961,8.0],["The Terminator",1984,8.1],["The Passion of Joan of Arc",1928,8.1],
+["The Treasure of the Sierra Madre",1948,8.2],["Manchester by the Sea",2016,7.8],
+["Whiplash",2014,8.5],["Rang De Basanti",2006,8.1],["The Handmaiden",2016,8.1],
+["Trois Couleurs: Rouge",1994,8.1],["Aladdin",1992,8.0],["Ikiru",1952,8.1],
+["Gangs of Wasseypur",2012,8.2],["Drishyam",2015,8.2],["Andhadhun",2018,8.2],
+["Demon Slayer the Movie: Mugen Train",2020,8.2],["The Sixth Sense",1999,8.1],
+["Portrait of a Lady on Fire",2019,8.1],["Barfi!",2012,8.1],["Pather Panchali",1955,8.2],
+["A Separation",2011,8.3],["Hachi: A Dog's Tale",2009,8.1],["Life of Brian",1979,8.0],
+["The Battle of Algiers",1966,8.1],["Roman Holiday",1953,8.0],["Yip Man",2008,8.0],
+["The Best Years of Our Lives",1946,8.1],["The 400 Blows",1959,8.1],["Rocky",1976,8.1],
+["逃出白垩纪",2022,7.9],["High and Low",1963,8.4],["Le Samouraï",1967,8.0],
+["The Grapes of Wrath",1940,8.1],["Ben-Hur",1959,8.1],["Rififi",1955,8.1],
+["Wild Strawberries",1957,8.1],["The Great Beauty",2013,8.0],["Miracle in Cell No. 7",2019,8.1],
+["Salaar",2023,7.8],["3-Iron",2004,8.0],["Kimi no Suizou wo Tabetai",2018,8.4],
+["The Battle of the Somme",1916,7.5],["Interstellar",2014,8.7],["Spotlight",2015,8.1],
+["Der Untergang",2004,8.3],["The Straight Story",1999,8.0],["Harry Potter and the Deathly Hallows: Part 2",2011,8.1],
+["The Girl with the Dragon Tattoo",2009,7.8],["The Help",2011,8.1],["Logan",2017,8.1],
+["Rocketry: The Nambi Effect",2022,8.6],["96",2018,8.5],["Hamilton",2020,8.3],
+["The Lives of Others",2006,8.4],["Kimetsu no Yaiba: Mugen Ressha-hen",2020,8.2],
+["Sherlock Jr.",1924,8.1],["Stand by Me",1986,8.1],["Ordinary People",1980,7.7],
+["Groundhog Day",1993,8.0],["Butch Cassidy and the Sundance Kid",1969,8.0],["Casino",1995,8.2],
+["Detachment",2011,8.1],["The Man Who Shot Liberty Valance",1962,8.1],["Rocky Balboa",2006,7.5],
+["The Princess Bride",1987,8.0],["12th Fail",2023,8.9],["Blade Runner",1982,8.1],
+["The Message",1976,8.1],["Marriage Story",2019,7.9],["Bacheha-Ye Aseman",1997,8.3],
+["My Father and My Son",2005,8.3],["Hera Pheri",2000,8.2],["Song of the Sea",2014,8.0],
+["Nayakan",1987,8.7]
+];
+
+const STORAGE_KEY = "sorteio250_watched";
+let watched = [];
+try {
+  const raw = localStorage.getItem(STORAGE_KEY);
+  watched = raw ? JSON.parse(raw) : [];
+} catch(e) { watched = []; }
+
+let currentPair = [];
+
+const KEY_STORAGE = "sorteio250_tmdbkey";
+const CACHE_STORAGE = "sorteio250_postercache";
+let posterCache = {};
+try {
+  const rawc = localStorage.getItem(CACHE_STORAGE);
+  posterCache = rawc ? JSON.parse(rawc) : {};
+} catch(e){ posterCache = {}; }
+
+function getApiKey(){
+  try { return localStorage.getItem(KEY_STORAGE) || ""; } catch(e){ return ""; }
+}
+function saveCache(){
+  try { localStorage.setItem(CACHE_STORAGE, JSON.stringify(posterCache)); } catch(e){}
+}
+
+async function fetchPoster(title, year){
+  const cacheKey = title + "|" + year;
+  if (posterCache[cacheKey] !== undefined) return posterCache[cacheKey];
+  const key = getApiKey();
+  if (!key) return null;
+  try {
+    const url = `https://api.themoviedb.org/3/search/movie?api_key=${encodeURIComponent(key)}&query=${encodeURIComponent(title)}&year=${year}`;
+    const res = await fetch(url);
+    if (!res.ok) { posterCache[cacheKey] = null; saveCache(); return null; }
+    const data = await res.json();
+    const first = data.results && data.results[0];
+    const path = first && first.poster_path ? `https://image.tmdb.org/t/p/w342${first.poster_path}` : null;
+    posterCache[cacheKey] = path;
+    saveCache();
+    return path;
+  } catch(e){
+    return null;
+  }
+}
+
+function save(){
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(watched)); } catch(e){}
+}
+
+function isWatched(t){ return watched.includes(t); }
+
+function posterGradient(title){
+  let h = 0;
+  for (let i=0;i<title.length;i++) h = (h*31 + title.charCodeAt(i)) % 360;
+  return `linear-gradient(160deg, hsl(${h},45%,26%), hsl(${(h+40)%360},50%,14%))`;
+}
+
+function initials(title){
+  return title.split(" ").filter(w=>w.length>2 || /^[A-Z]/.test(w)).slice(0,2).map(w=>w[0]).join("").toUpperCase() || title[0];
+}
+
+function updateCount(){
+  document.getElementById("count").textContent = watched.length + " de " + MOVIES.length + " assistidos";
+}
+
+function renderResults(){
+  const el = document.getElementById("results");
+  if (currentPair.length === 0){ el.innerHTML = ""; return; }
+  el.innerHTML = currentPair.map((m,i) => {
+    const [title,year,rating] = m;
+    const done = isWatched(title);
+    return `<div class="card">
+      <div class="poster" id="poster-${i}" style="background:${posterGradient(title)}">${initials(title)}</div>
+      <div class="meta">
+        <div class="title">${title}</div>
+        <div class="sub"><span class="year">${year}</span><span class="rating">★ ${rating}</span></div>
+        <button class="markbtn ${done?'done':''}" data-title="${title.replace(/"/g,'&quot;')}">${done ? 'assistido ✓' : 'marcar como assistido'}</button>
+      </div>
+    </div>`;
+  }).join("");
+  el.querySelectorAll(".markbtn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const t = btn.getAttribute("data-title");
+      if (!isWatched(t)) { watched.push(t); save(); updateCount(); renderResults(); renderWatchedList(); }
+    });
+  });
+  currentPair.forEach((m,i) => {
+    const [title,year] = m;
+    fetchPoster(title, year).then(url => {
+      if (!url) return;
+      const posterEl = document.getElementById(`poster-${i}`);
+      if (posterEl) posterEl.innerHTML = `<img src="${url}" alt="${title}" loading="lazy">`;
+    });
+  });
+}
+
+function draw(){
+  const remaining = MOVIES.filter(m => !isWatched(m[0]));
+  const el = document.getElementById("results");
+  if (remaining.length === 0){
+    currentPair = [];
+    el.innerHTML = `<div class="empty" style="grid-column:1/-1">Você já assistiu a lista inteira! Zere a lista para sortear de novo.</div>`;
+    return;
+  }
+  if (remaining.length === 1){
+    currentPair = [remaining[0]];
+  } else {
+    const idx1 = Math.floor(Math.random()*remaining.length);
+    let idx2 = Math.floor(Math.random()*remaining.length);
+    while (idx2 === idx1) idx2 = Math.floor(Math.random()*remaining.length);
+    currentPair = [remaining[idx1], remaining[idx2]];
+  }
+  renderResults();
+}
+
+function renderWatchedList(){
+  const el = document.getElementById("watchedList");
+  if (watched.length === 0){
+    el.innerHTML = `<div class="empty">Nenhum filme marcado ainda.</div>`;
+    return;
+  }
+  el.innerHTML = watched.slice().reverse().map(t => `<div>${t}<button data-title="${t.replace(/"/g,'&quot;')}">remover</button></div>`).join("");
+  el.querySelectorAll("button").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const t = btn.getAttribute("data-title");
+      watched = watched.filter(w => w !== t);
+      save(); updateCount(); renderWatchedList(); renderResults();
+    });
+  });
+}
+
+document.getElementById("drawBtn").addEventListener("click", draw);
+document.getElementById("toggleWatched").addEventListener("click", () => {
+  const el = document.getElementById("watchedList");
+  el.classList.toggle("open");
+});
+document.getElementById("resetBtn").addEventListener("click", () => {
+  if (confirm("Tem certeza que quer apagar toda a lista de assistidos?")){
+    watched = []; save(); updateCount(); renderWatchedList(); renderResults();
+  }
+});
+
+document.getElementById("saveKeyBtn").addEventListener("click", () => {
+  const val = document.getElementById("apiKeyInput").value.trim();
+  if (!val) return;
+  try { localStorage.setItem(KEY_STORAGE, val); } catch(e){}
+  document.getElementById("setup").style.display = "none";
+  renderResults();
+});
+
+if (!getApiKey()){
+  document.getElementById("setup").style.display = "block";
+}
+
+updateCount();
+renderWatchedList();
+</script>
+</body>
+</html>
